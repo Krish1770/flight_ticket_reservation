@@ -10,5 +10,5 @@ import java.util.Optional;
 
 @Service
 public interface PassengerRepoService {
-    Optional<List<Passenger>> findByBooking(Allocation allocation1);
+
 }

@@ -3,9 +3,7 @@ package com.example.flightReservation.service.impl;
 
 import com.example.flightReservation.dto.*;
 import com.example.flightReservation.entity.*;
-import com.example.flightReservation.repository.FlightRepository;
-import com.example.flightReservation.repository.JourneyRepository;
-import com.example.flightReservation.repository.LayOutRepository;
+import com.example.flightReservation.repository.*;
 import com.example.flightReservation.repository.service.AllocationRepoService;
 import com.example.flightReservation.repository.service.FlightRepoService;
 import com.example.flightReservation.repository.service.JourneyRepoService;
@@ -15,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -32,6 +31,11 @@ private AllocationRepoService allocationRepoService;
 
     @Autowired
     private LayOutRepository layOutRepository;
+
+    @Autowired
+    private AllocationRepository allocationRepository;
+    @Autowired
+    private PassengerBookingRepository passengerBookingRepository;
 @Autowired
 private FlightRepository flightRepository;
 
@@ -41,7 +45,8 @@ private FlightRepository flightRepository;
 @Autowired
 private PassengerRepoService passengerRepoService;
 
-
+@Autowired
+private UserRepository userRepository;
 
 @Autowired
 private JourneyRepository journeyRepository;
@@ -117,9 +122,9 @@ private JourneyRepository journeyRepository;
 
          for(Allocation allocation1:allocation.get())
           {
-              Optional<List< Passenger >> passengers=passengerRepoService.findByBooking(allocation1);
+              Optional<List< PassengerBooking >> passengers=passengerBookingRepository.findByBooking(allocation1);
 
-              for (Passenger passenger:passengers.get())
+              for (PassengerBooking passenger:passengers.get())
               {
 
                   if(passenger.getStatus().toString().equals("Blocked") || passenger.getStatus().toString().equals("Booked")) {
@@ -134,7 +139,19 @@ private JourneyRepository journeyRepository;
                       }
                   }
               }
+
+
           }
+
+         List<String> previouslyUsedNames=new ArrayList<>();
+
+         Optional<UserDetails> userDetails=userRepository.findById(checkFlightDto.getUserId());
+         Optional<List<Allocation>> allocationList=allocationRepoService.findAllByUserId(userDetails.get());
+
+
+        allocationList.ifPresent(allocations -> allocations.forEach(i -> passengerBookingRepository.findByBooking(i).get().forEach(j -> previouslyUsedNames.add(j.getPassenger().getPassengerName()))));
+
+
 
 
 
@@ -148,6 +165,8 @@ private JourneyRepository journeyRepository;
 
         SeatAllocationDto seatAllocationDto=new SeatAllocationDto(layOut,seat);
 
-        return ResponseEntity.status(HttpStatus.OK).body(new ResponseDto(HttpStatus.OK,"layout sent",seatAllocationDto));
+        CheckFlightResultDto checkFlightResultDto =new CheckFlightResultDto(seatAllocationDto,previouslyUsedNames);
+
+        return ResponseEntity.status(HttpStatus.OK).body(new ResponseDto(HttpStatus.OK,"layout sent",checkFlightResultDto));
     }
 }

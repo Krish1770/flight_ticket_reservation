@@ -7,8 +7,11 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.util.Date;
+import java.util.List;
 
 @Data
 @AllArgsConstructor
@@ -39,9 +42,8 @@ public class Allocation {
 
     private String flightId;
 
-       @JoinColumn(referencedColumnName = "journeyId",name = "journey")
-      @ManyToOne(targetEntity = Journey.class,cascade = CascadeType.ALL)
-       private Journey journey;
-
+    @ManyToOne(cascade = CascadeType.ALL)
+    @JdbcTypeCode(SqlTypes.JSON)
+    private Journey journey;
 
 }

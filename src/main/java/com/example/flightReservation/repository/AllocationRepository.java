@@ -3,6 +3,7 @@ package com.example.flightReservation.repository;
 
 import com.example.flightReservation.entity.Allocation;
 import com.example.flightReservation.entity.Journey;
+import com.example.flightReservation.entity.UserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -16,4 +17,6 @@ public interface AllocationRepository extends JpaRepository<Allocation,String> {
     Optional<List<Allocation>> findAllByFlightIdAndJourney(String flightId, Journey journey1);
 
     Optional<List<Allocation>> findAllByFlightIdAndJourneyAndJourneyDate(String flightId, Journey journey, Date journeyDate);
+
+    Optional<List<Allocation>> findAllByUserId(UserDetails userDetails);
 }

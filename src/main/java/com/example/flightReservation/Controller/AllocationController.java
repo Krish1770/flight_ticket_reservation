@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.xml.stream.util.XMLEventAllocator;
+import java.text.ParseException;
 
 @RestController
 public class AllocationController implements AllocationApi {
@@ -25,7 +26,7 @@ public class AllocationController implements AllocationApi {
     }
 
     @Override
-    public ResponseEntity<ResponseDto> addPayment(PaymentDto paymentDto) {
+    public ResponseEntity<ResponseDto> addPayment(PaymentDto paymentDto) throws ParseException {
         return allocationService.addPayment(paymentDto);
     }
 

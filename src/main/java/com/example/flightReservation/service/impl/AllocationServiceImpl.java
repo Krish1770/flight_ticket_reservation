@@ -2,16 +2,15 @@ package com.example.flightReservation.service.impl;
 
 import com.example.flightReservation.dto.*;
 import com.example.flightReservation.entity.*;
-import com.example.flightReservation.repository.AllocationRepository;
-import com.example.flightReservation.repository.JourneyRepository;
-import com.example.flightReservation.repository.PassengerRepository;
-import com.example.flightReservation.repository.PaymentRepository;
+import com.example.flightReservation.repository.*;
 import com.example.flightReservation.repository.service.AllocationRepoService;
+import com.example.flightReservation.repository.service.LinkOfferRepoService;
 import com.example.flightReservation.repository.service.PassengerRepoService;
 import com.example.flightReservation.repository.service.PaymentRepoService;
 import com.example.flightReservation.service.AllocationService;
 import com.example.flightReservation.service.UserService;
 import jakarta.transaction.Transactional;
+import org.springframework.aop.framework.autoproxy.AbstractAdvisorAutoProxyCreator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
 import org.springframework.http.HttpStatus;
@@ -22,6 +21,8 @@ import org.springframework.stereotype.Service;
 import java.awt.print.Book;
 import java.nio.file.attribute.AclFileAttributeView;
 import java.sql.Time;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 import static com.example.flightReservation.constants.BookingStatus.*;
@@ -34,9 +35,18 @@ public class AllocationServiceImpl implements AllocationService {
     AllocationRepoService allocationRepoService;
 
     @Autowired
+    LinkOfferRepoService linkOfferRepoService;
+
+    @Autowired
+    private PassengerBookingRepository passengerBookingRepository;
+
+    @Autowired
     private AllocationRepository allocationRepository;
     @Autowired
     private JourneyRepository journeyRepository;
+
+    @Autowired
+    private UserServiceImpl userServiceImpl;
 
     @Autowired
     private UserService userDetailsService;
@@ -48,7 +58,17 @@ public class AllocationServiceImpl implements AllocationService {
     private PaymentRepository paymentRepository;
 
     @Autowired
+    private LinkOfferRepository linkOfferRepository;
+
+    @Autowired
+    private RewardRepository rewardRepository;
+
+
+    @Autowired
     private PassengerRepoService passengerRepoService;
+
+    @Autowired
+    private UserRewardRepository userRewardRepository;
 
     @Autowired
     private PaymentRepoService paymentRepoService;
@@ -74,8 +94,6 @@ public class AllocationServiceImpl implements AllocationService {
            Optional<Journey> journey=journeyRepository.findById(allocationDto.getJourneyId());
 
            journey.ifPresent(allocation::setJourney);
-//         if( journey.isPresent() )
-//             allocation.setJourney(journey.get());
            allocation.setJourneyDate(allocationDto.getJourneyDate());
            allocation.setFlightId(allocation.getFlightId());
 
@@ -91,17 +109,21 @@ public class AllocationServiceImpl implements AllocationService {
                  passenger.setAge(passengerDto.getAge());
                  passenger.setGender(passengerDto.getGender());
 
-//                 Example<Passenger> example=Example.of(passenger);
+                 Example<Passenger> example=Example.of(passenger);
 
-                 passenger.setBookedDate(new Date());
-                 passenger.setSeatType(passengerDto.getSeatType());
-                 passenger.setStatus(Blocked);
-                 passenger.setSeatId(passengerDto.getSeatNo());
+                 PassengerBooking passengerBooking=new PassengerBooking();
+                 passengerBooking.setBookedDate(new Date());
+                 passengerBooking.setSeatType(passengerDto.getSeatType());
+                 passengerBooking.setStatus(Blocked);
+                 passengerBooking.setSeatId(passengerDto.getSeatNo());
 
-                 passenger.setBooking(savedAllocation);
+                 passengerBooking.setBooking(savedAllocation);
 
 
               Passenger savedPassenger = passengerRepository.save(passenger);
+
+              passengerBooking.setPassenger(savedPassenger);
+              passengerBookingRepository.save(passengerBooking);
              }
 
        }
@@ -114,38 +136,41 @@ public class AllocationServiceImpl implements AllocationService {
     }
 
     @Override
-    public ResponseEntity<ResponseDto> addPayment(PaymentDto paymentDto) {
+    public ResponseEntity<ResponseDto> addPayment(PaymentDto paymentDto) throws ParseException {
 
         Optional<Allocation> allocation= allocationRepository.findById(paymentDto.getBookingId());
-        Optional<List<Passenger>> passengers=null;
+        Optional<List<PassengerBooking>> passengers=null;
 
         Payment payment=new Payment();
-        if(allocation.isPresent())
-         passengers =passengerRepository.findByBooking(allocation.get());
+        if(allocation.isPresent()) {
+            passengers = passengerBookingRepository.findByBooking(allocation.get());
 
-        if(passengers.isEmpty())
-            return ResponseEntity.status(HttpStatus.OK).body(new ResponseDto(HttpStatus.OK,"",""));
-        for(Passenger passenger: passengers.get())
-        {
-            if(passenger.getStatus().toString().equals("Blocked"))
-            {
-                passenger.setStatus(Booked);
-                passengerRepository.save(passenger);
+            assert passengers.isPresent();
+            if (passengers.isEmpty())
+                return ResponseEntity.status(HttpStatus.OK).body(new ResponseDto(HttpStatus.OK, "", ""));
+            for (PassengerBooking passenger : passengers.get()) {
+                if (passenger.getStatus().toString().equals("Blocked")) {
+                    passenger.setStatus(Booked);
+                    passengerBookingRepository.save(passenger);
+                }
+
             }
 
+            String pnr = pnrGenerator(allocation.get());
+            payment = Payment.builder().
+                    booking(allocation.get())
+                    .paymentDate(new Date())
+                    .amount(paymentDto.getTotal())
+                    .pnr(pnr)
+                    .paymentType(paymentDto.getPaymentType()).build();
+
+            paymentRepository.save(payment);
+
+            assignReward(allocation.get().getUserId());
+
+            return ResponseEntity.status(HttpStatus.OK).body(new ResponseDto(HttpStatus.OK, "payment done and seats are booked", paymentDto.getBookingId()));
         }
-
-        String pnr=pnrGenerator(allocation.get());
-        payment=Payment.builder().
-                booking(allocation.get())
-                .paymentDate(new Date())
-                .amount(paymentDto.getTotal())
-                .pnr(pnr)
-                .paymentType(paymentDto.getPaymentType()).build();
-
-        paymentRepository.save(payment);
-
-        return ResponseEntity.status(HttpStatus.OK).body(new ResponseDto(HttpStatus.OK,"payment done and seats are booked",paymentDto.getBookingId()));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ResponseDto(HttpStatus.BAD_REQUEST, "error occured", ""));
 
     }
 
@@ -157,18 +182,18 @@ public class AllocationServiceImpl implements AllocationService {
 
         Allocation allocation=payment.getBooking();
 
-        Optional<List<Passenger>> passengerList=passengerRepoService.findByBooking(allocation);
+        Optional<List<PassengerBooking>> passengerList=passengerBookingRepository.findByBooking(allocation);
 
         if(passengerList.isPresent())
         {
-            for(Passenger passenger:passengerList.get())
+            for(PassengerBooking passenger:passengerList.get())
             {
                 if(passenger.getSeatType().equals(cancelDto.getSeatType()) && passenger.getStatus().toString().equals("Booked"))
                 {
                     if(Long .parseLong(passenger.getSeatId().split("_")[2])== cancelDto.getSeatId())
                     {
                         passenger.setStatus(Cancelled);
-                        passengerRepository.save(passenger);
+                        passengerBookingRepository.save(passenger);
                         return ResponseEntity.status(HttpStatus.OK).body(new ResponseDto(HttpStatus.OK,"ticket cancelled",""));
                     }
                 }
@@ -189,12 +214,14 @@ public class AllocationServiceImpl implements AllocationService {
              Date presentDate=new Date();
 
             System.out.println("checking");
-                  long diff=presentDate.getTime()-passenger.getBookedDate().getTime();
+
+             PassengerBooking passengerBooking=passengerBookingRepository.findByPassenger(passenger);
+                  long diff=presentDate.getTime()-passengerBooking.getBookedDate().getTime();
 
                   if(diff>300000)
                   {
-                      passenger.setStatus(unBlocked);
-                      passengerRepository.save(passenger);
+                      passengerBooking.setStatus(unBlocked);
+                      passengerBookingRepository.save(passengerBooking);
                   }
         }
     }
@@ -206,6 +233,7 @@ public class AllocationServiceImpl implements AllocationService {
         Random random=new Random();
 
         String pnrId="";
+//        List<Allocation> allocationList = new ArrayList<>();
 
       Optional <List<Allocation>>allocationList=allocationRepoService.findAllByFlightIdAndJourneyAndJourneyDate(allocation.getFlightId(),allocation.getJourney(),allocation.getJourneyDate());
 
@@ -232,4 +260,68 @@ public class AllocationServiceImpl implements AllocationService {
         }
         return pnrId;
     }
+
+    public ResponseEntity<ResponseDto> assignReward(UserDetails userDetails) throws ParseException {
+
+        UserReward userReward=new UserReward();
+
+        userReward.setCreatedAt(new Date());
+
+        String rewardType="";
+
+//        Optional<Rewards> rewards=rewardRepository.findById(assignRewardDto.getRewardId());
+        Random random=new Random();
+       int choice=random.nextInt(0,4);
+
+       Rewards rewards=new Rewards();
+
+         if(choice==1)
+         {
+          rewardType+="link";
+
+
+         }
+       else if(choice==2)
+         {
+             rewardType+="cashBack";
+         }
+       else
+         {
+             rewardType+="code";
+         }
+
+
+
+          Rewards rewards1=rewardRepository.getRandomReward(rewardType);
+
+         userReward.setRewardId(rewards1);
+
+       LinkOffer linkOffer=new LinkOffer();
+       if(choice==1) {
+           linkOffer = linkOfferRepoService.getFirstByIsActive(true);
+           userReward.setLinkId(linkOffer.getId());
+           linkOffer.setIsActive(false);
+           linkOfferRepository.save(linkOffer);
+       }
+
+            userReward.setUserId(userDetails);
+            userReward.setStatus("alotted");
+
+            SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd");
+            Calendar calendar = Calendar.getInstance();
+            calendar.add(Calendar.DAY_OF_MONTH,rewards1.getValidity());
+            String expDate= sdf.format(calendar.getTime());
+            Date date=new SimpleDateFormat("yyyy-MM-dd").parse(expDate);
+            userReward.setExpiryDate(date);
+            userReward.setCreatedAt(new Date());
+
+            userRewardRepository.save(userReward);
+
+
+            return ResponseEntity.status(HttpStatus.OK).body(new ResponseDto(HttpStatus.OK,"reward added to the user",""));
+
+
+    }
+
+
 }

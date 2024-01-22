@@ -2,6 +2,7 @@ package com.example.flightReservation.repository.service.impl;
 
 import com.example.flightReservation.entity.Allocation;
 import com.example.flightReservation.entity.Journey;
+import com.example.flightReservation.entity.UserDetails;
 import com.example.flightReservation.repository.AllocationRepository;
 import com.example.flightReservation.repository.service.AllocationRepoService;
 import com.example.flightReservation.service.AllocationService;
@@ -28,5 +29,10 @@ public class AllocationRepoServiceImpl implements AllocationRepoService {
     @Override
     public Optional<List<Allocation>> findAllByFlightIdAndJourneyAndJourneyDate(String flightId, Journey journey, Date journeyDate) {
         return allocationRepository.findAllByFlightIdAndJourneyAndJourneyDate(flightId,journey,journeyDate);
+    }
+
+    @Override
+    public Optional<List<Allocation>> findAllByUserId(UserDetails userDetails) {
+        return allocationRepository.findAllByUserId(userDetails);
     }
 }

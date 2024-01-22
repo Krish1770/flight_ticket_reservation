@@ -16,8 +16,6 @@ public class PassengerRepoServiceImpl implements PassengerRepoService {
 
     @Autowired
     private PassengerRepository passengerRepository;
-    @Override
-    public Optional<List<Passenger>> findByBooking(Allocation allocation1) {
-        return passengerRepository.findByBooking(allocation1);
+
     }
-}
+

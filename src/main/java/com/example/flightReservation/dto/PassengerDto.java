@@ -22,4 +22,6 @@ public class PassengerDto {
 
     private String seatType;
 
+    private String aadharId;
+
 }

@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+import java.text.ParseException;
+
 
 @RequestMapping("Allocation")
 public interface AllocationApi {
@@ -19,7 +21,7 @@ public interface AllocationApi {
     ResponseEntity<ResponseDto> add(@RequestBody  AllocationDto allocationDto);
 
     @PostMapping("Payment")
-    ResponseEntity<ResponseDto> addPayment(@RequestBody PaymentDto paymentDto);
+    ResponseEntity<ResponseDto> addPayment(@RequestBody PaymentDto paymentDto) throws ParseException;
 
     @PostMapping("Cancel")
     ResponseEntity<ResponseDto> cancelSeat(@RequestBody CancelDto cancelDto);

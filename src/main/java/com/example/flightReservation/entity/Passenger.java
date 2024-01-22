@@ -2,17 +2,22 @@ package com.example.flightReservation.entity;
 
 
 import com.example.flightReservation.constants.BookingStatus;
-import jakarta.persistence.*;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Date;
 
+
+@Entity
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Entity
+
 public class Passenger {
 
     @Id
@@ -25,17 +30,5 @@ public class Passenger {
 
     private String gender;
 
-    @Enumerated(EnumType.STRING)
-    private BookingStatus status;
-
-    private String seatId;
-
-    private String seatType;
-
-    private Date bookedDate;
-
-    @ManyToOne
-    @JoinColumn(referencedColumnName = "bookingId")
-    private Allocation booking;
-
+    private String aadharId;
 }

@@ -6,9 +6,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.LocalDate;
+
 import java.time.LocalTime;
-import java.util.Date;
+
 import java.util.List;
 
 
@@ -33,7 +33,6 @@ public class Flight {
     private LocalTime CheckInTimeGap;
 
     private Discount discountList;
-
 
 
     private List<Journey> journeyList;

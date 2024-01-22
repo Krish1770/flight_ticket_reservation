@@ -11,7 +11,6 @@ import lombok.NoArgsConstructor;
 @Data
 @Builder
 @Entity
-
 public class UserDetails{
 
     @Id

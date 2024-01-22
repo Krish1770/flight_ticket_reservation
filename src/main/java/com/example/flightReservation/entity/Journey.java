@@ -1,18 +1,20 @@
 package com.example.flightReservation.entity;
 
 import jakarta.persistence.*;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.sql.Time;
 import java.time.LocalTime;
+import java.util.List;
 
 
+@Entity
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Entity
 public class Journey {
 
     @Id
@@ -31,4 +33,7 @@ public class Journey {
     @Column(name = "departingPoint")
     private String departingPoint;
 
+//    @OneToMany(fetch = FetchType.LAZY)
+//    @JoinColumn(name = "alloc")
+//    private List<Allocation> allocations;
 }

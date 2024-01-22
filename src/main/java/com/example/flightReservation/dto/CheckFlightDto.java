@@ -11,6 +11,7 @@ import java.util.Date;
 @NoArgsConstructor
 @Data
 public class CheckFlightDto {
+private String userId;
 
     private String flightId;
 
